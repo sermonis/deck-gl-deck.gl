@@ -9,6 +9,7 @@ import {
 
 import {GPUGridLayer} from '@deck.gl/aggregation-layers';
 import {GridLayer} from '@deck.gl/aggregation-layers';
+import {_HeatMapLayer as HeatMapLayer, _TriangleLayer as TriangleLayer} from '@deck.gl/aggregation-layers';
 import * as h3 from 'h3-js';
 
 import {registerLoaders} from '@loaders.gl/core';
@@ -18,11 +19,35 @@ import * as dataSamples from '../data-samples';
 
 registerLoaders([PLYLoader]);
 
+const USE_EARTHQUACKE_DATA = true;
+
 const GRID_LAYER_PROPS = {
-  getData: () => dataSamples.points,
+  getData: () => USE_EARTHQUACKE_DATA ? dataSamples.earthquakes : dataSamples.points,
   props: {
     id: 'gpu-grid-layer',
-    cellSize: 200,
+    cellSize: 10000,
+    opacity: 1,
+    extruded: true,
+    pickable: false,
+    getPosition: d => USE_EARTHQUACKE_DATA ? d.geometry.coordinates : d.COORDINATES
+  }
+};
+
+const HEAT_LAYER_EQ_PROPS = {
+  getData: () => dataSamples.earthquakes,
+  props: {
+    id: 'heatmp-layer-eq',
+    opacity: 1,
+    extruded: true,
+    pickable: false,
+    getPosition: d => d.geometry.coordinates
+  }
+};
+
+const HEAT_LAYER_PROPS = {
+  getData: () => dataSamples.points,
+  props: {
+    id: 'heatmp-layer',
     opacity: 1,
     extruded: true,
     pickable: false,
@@ -32,6 +57,18 @@ const GRID_LAYER_PROPS = {
 
 const GPUGridLayerExample = Object.assign({}, {layer: GPUGridLayer}, GRID_LAYER_PROPS);
 const GridLayerExample = Object.assign({}, {layer: GridLayer}, GRID_LAYER_PROPS);
+const HeatMapLayerExample = Object.assign({}, {layer: HeatMapLayer}, HEAT_LAYER_PROPS);
+const HeatMapLayerExampleEQ = Object.assign({}, {layer: HeatMapLayer}, HEAT_LAYER_EQ_PROPS);
+
+const TriangleLayerExample = {
+  layer: TriangleLayer,
+  props: {
+    id: 'triangel-layer',
+    wireframe: false, // true,
+    data: [1], // dummy
+    count: 6, // 3, // 6
+  }
+};
 
 const GPUGridLayerPerfExample = (id, getData) => ({
   layer: GPUGridLayer,
@@ -137,6 +174,9 @@ export default {
   'Experimental Core Layers': {
     GPUGridLayer: GPUGridLayerExample,
     GridLayer: GridLayerExample,
+    HeatMapLayer: HeatMapLayerExample,
+    HeatMapLayerEQ: HeatMapLayerExampleEQ,
+    TriangleLayer: TriangleLayerExample,
     'GPUGridLayer (1M)': GPUGridLayerPerfExample('1M', dataSamples.getPoints1M),
     'GPUGridLayer (5M)': GPUGridLayerPerfExample('5M', dataSamples.getPoints5M)
   }

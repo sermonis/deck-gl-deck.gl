@@ -1,9 +1,10 @@
 import React, {PureComponent} from 'react';
 import {StaticMap, _MapContext as MapContext, NavigationControl} from 'react-map-gl';
 import autobind from 'react-autobind';
+import '@luma.gl/debug';
 
 import DeckGL from '@deck.gl/react';
-import {COORDINATE_SYSTEM, View} from '@deck.gl/core';
+import {COORDINATE_SYSTEM, View, WebMercatorViewport} from '@deck.gl/core';
 
 import LayerInfo from './components/layer-info';
 
@@ -27,6 +28,21 @@ const VIEW_LABEL_STYLES = {
   color: '#FFFFFF'
 };
 
+const VIEW_STATES = [
+  {
+    longitude: -122.4250578732143,
+    latitude: 37.75334361844128,
+    zoom:11.5
+  },
+  {
+    longitude: -152.25806733130415,
+    latitude: 37.752000000003775,
+    zoom:1.5
+  }
+];
+
+const ZOOM_VALUES = [1.5, 11.5];
+
 const ViewportLabel = props => (
   <div style={{position: 'absolute'}}>
     <div style={{...VIEW_LABEL_STYLES, display: ''}}>{props.children}</div>
@@ -39,13 +55,16 @@ export default class Map extends PureComponent {
     autobind(this);
 
     this.state = {
-      mapViewState: {
-        latitude: 37.752,
-        longitude: -122.427,
-        zoom: 11.5,
+      mapViewState: Object.assign({
+        // latitude: 37.752,
+        // longitude: -122.427,
+        // zoom: 1.5,
+        longitude: -122.4250578732143,
+        latitude: 37.75334361844128,
+        zoom:11.5,
         pitch: 0,
         bearing: 0
-      },
+      }, VIEW_STATES[0]),
       orbitViewState: {
         target: [0, 0, 0],
         zoom: 3,
@@ -57,7 +76,8 @@ export default class Map extends PureComponent {
       clickedItem: null,
       queriedItems: null,
 
-      enableDepthPickOnClick: false
+      enableDepthPickOnClick: false,
+      _index: 0
     };
 
     this.deckRef = React.createRef();
@@ -79,6 +99,27 @@ export default class Map extends PureComponent {
     }
   }
 
+  fitbounds(opts) {
+    // const {x, y, width, height} = opts;
+    const {mapViewState} = this.state;
+    const bounds = [[-122.38, 37.73], [-122.0, 37.78]];
+    const bounds2 = [[-122.11, 37.71], [-122.07, 37.8]];
+    const width = (mapViewState.height * (-122.0 - -122.38)) / (37.78 - 37.73);
+    const viewport = new WebMercatorViewport(Object.assign({}, mapViewState)); //, {width}));
+    const newViewport = viewport.fitBounds(bounds);
+    const newViewState = {
+      ...newViewport,
+      transitionDuration: 500
+    };
+    this.setState({mapViewState: newViewState});
+  }
+
+  toggleZoom() {
+    let {_index = 1} = this.state;
+    _index = (_index + 1) % 2;
+    const mapViewState = Object.assign({}, this.state.mapViewState, VIEW_STATES[_index]);
+    this.setState({mapViewState, _index});
+  }
   _onViewStateChange({viewState, viewId}) {
     if (viewId === 'infovis') {
       this.setState({orbitViewState: viewState});
@@ -88,6 +129,8 @@ export default class Map extends PureComponent {
       viewState.pitch = 60;
     }
     this.setState({mapViewState: viewState});
+    const {longitude, latitude, zoom} = viewState;
+    console.log(`mapViewState: ${longitude} ${latitude} ${zoom}`);
   }
 
   _onHover(info) {

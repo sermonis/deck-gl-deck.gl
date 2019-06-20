@@ -2,21 +2,22 @@
 import GL from '@luma.gl/constants';
 import {Framebuffer, Texture2D} from '@luma.gl/core';
 
-export function getFloatTexture(gl, opts) {
-  const {width = 1, height = 1} = opts;
+export function getFloatTexture(gl, opts = {}) {
+  const {width = 1, height = 1, data = null, unpackFlipY = true, parameters} = opts;
   const texture = new Texture2D(gl, {
-    data: null,
+    data,
     format: GL.RGBA32F,
     type: GL.FLOAT,
     border: 0,
     mipmaps: false,
-    parameters: {
+    parameters: parameters || {
       [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
       [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
     },
     dataFormat: GL.RGBA,
     width,
-    height
+    height,
+    unpackFlipY
   });
   return texture;
 }
