@@ -30,7 +30,6 @@ npm_path = os.pathsep.join([
 ])
 
 
-
 def update_package_data(distribution):
     """update package_data to catch changes during setup"""
     build_py = distribution.get_command_obj('build_py')
@@ -43,7 +42,7 @@ def js_prerelease(command, strict=False):
     """decorator for building minified js/css prior to another command"""
     class DecoratedCommand(command):
         def run(self):
-            jsdeps = self.distribution.get_command_obj('jsdeps')
+            jsdeps = self.distribution.get_command_obj('jsdeps')  # noqa
             self.distribution.run_command('jsdeps')
             command.run(self)
             update_package_data(self.distribution)
@@ -61,7 +60,6 @@ class NPM(Command):
         os.path.join(here, 'pydeck', 'nbextension', 'static', 'index.js'),
         os.path.join(here, 'pydeck', 'nbextension', 'static', 'index.js.map'),
     ]
-
 
     def initialize_options(self):
         pass
@@ -93,7 +91,6 @@ class NPM(Command):
         for js_file in js_files:
             log.debug('Copying %s to %s' % (js_file, static_folder))
             copy(js_file, static_folder)
-
 
     def run(self):
         has_npm = self.has_npm()
