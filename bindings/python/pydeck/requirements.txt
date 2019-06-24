@@ -1,2 +1,4 @@
-ipywidgets>=7.0.0,<8
-traitlets>=4.3.2
+http://test.pypi.org/simple/pydeck/
+sklearn
+pandas==0.24.2
+geopandas==0.5.0
