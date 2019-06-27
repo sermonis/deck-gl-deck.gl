@@ -2,6 +2,11 @@ FROM python:3.7-slim
 RUN pip install --no-cache-dir notebook==5.*
 COPY bindings/python/pydeck/requirements.txt /tmp/
 RUN pip install --requirement /tmp/requirements.txt
+RUN pip install ipywidgets
+RUN jupyter nbextension enable --py widgetsnbextension
+RUN jupyter nbextension install --py --symlink --sys-prefix pydeck
+RUN jupyter nbextension enable --py --sys-prefix pydeck
+
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
