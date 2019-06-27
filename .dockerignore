@@ -1,6 +1,5 @@
 modules/
 node_modules/
-bindings/
 dev-docs/
 docs/
 examples/
@@ -22,3 +21,5 @@ package.json
 README.md
 webpack.config.js
 yarn.lock
+bindings/python/pydeck/build/
+bindings/python/pydeck/dist/

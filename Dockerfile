@@ -1,5 +1,7 @@
 FROM python:3.7-slim
 RUN pip install --no-cache-dir notebook==5.*
+COPY bindings/python/pydeck/requirements.txt /tmp/
+RUN pip install --requirement /tmp/requirements.txt
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
@@ -12,11 +14,9 @@ RUN adduser --disabled-password \
     --uid ${NB_UID} \
     ${NB_USER}
 
+ENV HOME=/tmp
 COPY . ${HOME}
+
 USER root
 RUN chown -R ${NB_UID} ${HOME}
 USER ${NB_USER}
-
-ENV HOME=/tmp
-COPY bindings/python/pydeck/requirements.txt /tmp/
-RUN pip install --requirement /tmp/requirements.txt
