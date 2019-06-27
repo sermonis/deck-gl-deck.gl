@@ -23,4 +23,6 @@ webpack.config.js
 yarn.lock
 bindings/python/pydeck/build/
 bindings/python/pydeck/dist/
+bindings/python/pydeck/env/
+bindings/python/pydeck/env3/
 .*/
