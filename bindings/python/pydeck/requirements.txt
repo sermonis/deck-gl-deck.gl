@@ -1,4 +1,4 @@
-http://test.pypi.org/simple/pydeck/pydeck-0.1.dev1-py2.py3-none-any.whl
+https://test-files.pythonhosted.org/packages/9a/37/f796f7559991e461d1295d89c0590da7721a5c4a42e8b86a876b57575273/pydeck-0.1.dev2-py2.py3-none-any.whl#sha256=dbc854f7ff8ecc10cebfac8f0bfe5eb7ba61d83edc8a6f47721487eb65919dd5
 sklearn
 pandas==0.24.2
 geopandas==0.5.0
