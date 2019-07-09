@@ -61,6 +61,12 @@ class NPM(Command):
         os.path.join(here, 'pydeck', 'nbextension', 'static', 'index.js.map'),
     ]
 
+    for filepath in targets:
+        try:
+            os.remove(filepath)
+        except Exception:
+            log.info('No file %s, not removing' % filepath)
+
     def initialize_options(self):
         pass
 
@@ -102,6 +108,7 @@ class NPM(Command):
         env['PATH'] = npm_path
 
         log.info("Installing build dependencies with npm. This may take a while...")
+        check_call(['npm', 'install'], cwd=node_root, stdout=sys.stdout, stderr=sys.stderr)
         check_call(['npm', 'run', 'notebook-bundle'], cwd=node_root, stdout=sys.stdout, stderr=sys.stderr)
 
         self.copy_js()
