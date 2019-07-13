@@ -1,7 +1,12 @@
 FROM python:3.7-slim
 RUN pip install --no-cache-dir notebook==5.*
-COPY bindings/python/pydeck/requirements.txt /tmp/
-RUN pip install --requirement /tmp/requirements.txt
+
+ENV HOME=/tmp
+COPY . ${HOME}
+WORKDIR ${HOME}/bindings/python/pydeck
+RUN pip install -r requirements.txt
+RUN pip install -r requirements-dev.txt
+RUN pip install /tmp/bindings/python/pydeck/dist/pydeck-0.1.dev1-py2.py3-none-any.whl
 RUN jupyter nbextension install --py --symlink --sys-prefix pydeck
 RUN jupyter nbextension enable --py --sys-prefix pydeck
 
@@ -16,8 +21,6 @@ RUN adduser --disabled-password \
     --uid ${NB_UID} \
     ${NB_USER}
 
-ENV HOME=/tmp
-COPY . ${HOME}
 
 USER root
 RUN chown -R ${NB_UID} ${HOME}
