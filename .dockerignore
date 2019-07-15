@@ -1,10 +1,7 @@
-modules/
 node_modules/
 dev-docs/
 docs/
 examples/
-modules/
-node_modules/
 scripts/
 showcases/
 test/
@@ -19,8 +16,9 @@ ocular-dev-tools.config.js
 package-lock.json
 package.json
 README.md
-webpack.config.js
 yarn.lock
 bindings/python/pydeck/env/
 bindings/python/pydeck/env3/
+bindings/python/pydeck/dist/
+bindings/python/pydeck/build/
 .*/
