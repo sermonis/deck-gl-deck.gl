@@ -4,10 +4,10 @@ RUN pip install --no-cache-dir notebook==5.*
 ENV HOME=/tmp
 COPY . ${HOME}
 WORKDIR ${HOME}/bindings/python/pydeck
-RUN apt-get update -yq \
-    && apt-get install curl gnupg -yq \
-    && curl -sL https://deb.nodesource.com/setup_8.x | bash \
-    && apt-get install nodejs -yq
+RUN apt-get update
+RUN apt-get -y install curl gnupg
+RUN curl -sL https://deb.nodesource.com/setup_11.x  | bash -
+RUN apt-get -y install nodejs
 RUN npm install -g webpack \
     && npm install -g webpack-cli
 RUN pip install -r requirements.txt \
