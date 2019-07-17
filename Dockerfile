@@ -1,15 +1,17 @@
 FROM python:3.7-slim
 RUN pip install --no-cache-dir notebook==5.*
 
-ENV HOME=/tmp
-COPY . ${HOME}
-WORKDIR ${HOME}/bindings/python/pydeck
 RUN apt-get update
 RUN apt-get -y install curl gnupg
 RUN curl -sL https://deb.nodesource.com/setup_11.x  | bash -
 RUN apt-get -y install nodejs
 RUN npm install -g webpack \
     && npm install -g webpack-cli
+
+ENV HOME=/tmp
+COPY . ${HOME}
+WORKDIR ${HOME}/bindings/python/pydeck
+
 RUN pip install -r requirements.txt \
     && pip install -r requirements-dev.txt \
     && pip install -e .
