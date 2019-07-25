@@ -43,12 +43,7 @@ export function boundsContain(currentBounds, targetBounds) {
 // For given rectangle bounds generates two triangles vertices that coverit completely
 export function getTriangleVertices(opts = {}) {
   const {xMin = 0, yMin = 0, xMax = 1, yMax = 1, addZ = false} = opts;
-  // if (xDeltaMin > Math.abs(xMax - xMin)) {
-  //   xDeltaMin = Math.abs(xMax - xMin);
-  // }
-  // if (yDeltaMin > Math.abs(yMax - yMin)) {
-  //   yDeltaMin = Math.abs(yMax - yMin);
-  // }
+
   if (addZ) {
     return new Float32Array([
       xMin, yMin, 0,  xMax, yMin, 0,  xMax, yMax, 0,
@@ -87,4 +82,17 @@ export function scaleToAspectRatio(boundingBox, width, height) {
 
 
   return [[xCenter - newWidth/2, yCenter - newHeight/2], [xCenter + newWidth/2, yCenter + newHeight/2]];
+}
+
+// Scales texture coordiante range to a sub rectangel
+export function scaleTextureCoordiantes(originaRect, subRect) {
+  const [[xMin, yMin], [xMax, yMax]] = originaRect;
+  const [[subXMin, subYMin], [subXMax, subYMax]] = subRect;
+  const width = xMax - xMin;
+  const height = yMax - yMin;
+  const tXMin = (subXMin - xMin) / width;
+  const tXMax = (subXMax - xMin) / width;
+  const tYMin = (subYMin - yMin) / height;
+  const tYMax = (subYMax - yMin) / height;
+  return [[tXMin, tYMin], [tXMax, tYMax]];
 }

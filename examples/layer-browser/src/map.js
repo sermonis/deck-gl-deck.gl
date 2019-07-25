@@ -32,12 +32,12 @@ const VIEW_STATES = [
   {
     longitude: -122.4250578732143,
     latitude: 37.75334361844128,
-    zoom:11.5
+    zoom: 11.5
   },
   {
     longitude: -152.25806733130415,
     latitude: 37.752000000003775,
-    zoom:1.5
+    zoom: 1.5
   }
 ];
 
@@ -55,16 +55,19 @@ export default class Map extends PureComponent {
     autobind(this);
 
     this.state = {
-      mapViewState: Object.assign({
-        // latitude: 37.752,
-        // longitude: -122.427,
-        // zoom: 1.5,
-        longitude: -122.4250578732143,
-        latitude: 37.75334361844128,
-        zoom:11.5,
-        pitch: 0,
-        bearing: 0
-      }, VIEW_STATES[0]),
+      mapViewState: Object.assign(
+        {
+          // latitude: 37.752,
+          // longitude: -122.427,
+          // zoom: 1.5,
+          longitude: -122.4250578732143,
+          latitude: 37.75334361844128,
+          zoom: 11.5,
+          pitch: 0,
+          bearing: 0
+        },
+        VIEW_STATES[0]
+      ),
       orbitViewState: {
         target: [0, 0, 0],
         zoom: 3,
@@ -129,8 +132,6 @@ export default class Map extends PureComponent {
       viewState.pitch = 60;
     }
     this.setState({mapViewState: viewState});
-    const {longitude, latitude, zoom} = viewState;
-    console.log(`mapViewState: ${longitude} ${latitude} ${zoom}`);
   }
 
   _onHover(info) {

@@ -49,11 +49,17 @@ vec4 getLinearColor(float value, float maxValue) {
 void main(void) {
   vec4 weight = texture2D(texture, vTexCoords);
   if (weight.r == 0.) {
-    discard;
+     discard;
   }
   float maxValue = texture2D(maxTexture, vec2(0.5)).r;
   vec4 linearColor = getLinearColor(weight.r, maxValue);
   linearColor.a *= opacity;
   gl_FragColor = hasTexture ? linearColor : vec4(1., 0., 0, 1.);
+
+  // HACK
+  // if (weight.r == 0.) {
+  //   gl_FragColor = vec4(0.5, 0., 0.5, 0.5);
+  // }
+
 }
 `;

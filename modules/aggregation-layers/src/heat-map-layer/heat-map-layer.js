@@ -23,7 +23,8 @@ import {
   boundsContain,
   getTriangleVertices,
   parseData,
-  scaleToAspectRatio
+  scaleToAspectRatio,
+  scaleTextureCoordiantes
 } from './heatmap-layer-utils';
 import {Buffer, Transform, getParameter} from '@luma.gl/core';
 import {CompositeLayer} from '@deck.gl/core';
@@ -62,7 +63,7 @@ export default class HeatMapLayer extends CompositeLayer {
       weightsTransform: new Transform(gl, {
         id: `${this.id}-weights-transform`,
         vs: weights_vs,
-        fs: weights_fs,
+        _fs: weights_fs,
         modules: ['project32'],
         elementCount: 1,
         _targetTexture: weightsTexture,
@@ -160,65 +161,56 @@ export default class HeatMapLayer extends CompositeLayer {
     const {triPositionBuffer, textureSize} = this.state;
     const width = textureSize;
     const height = textureSize;
-
     // #1: get world bounds for current viewport extends
     const visibleWorldBounds = this.getVisibleWorldBounds(); // TODO: Change to visible bounds
+    const newState = {visibleWorldBounds};
+    let boundsChanged = false;
 
-    // check this.state.worldBounds exist and contains worldBounds
-    if (!forceUpdate && this.state.worldBounds && boundsContain(this.state.worldBounds, visibleWorldBounds)) {
-      return false;
+    if (forceUpdate || !this.state.worldBounds || !boundsContain(this.state.worldBounds, visibleWorldBounds)) {
+
+      // #2 : convert world bounds to common (Flat) bounds
+      let [topLeftCommon, bottomRightCommon] = this.worldToCommonBounds(visibleWorldBounds);
+
+      // #3: extend common bounds to match aspect ratio with viewport
+      [topLeftCommon, bottomRightCommon] = scaleToAspectRatio([topLeftCommon, bottomRightCommon], width * RESOLUTION, height * RESOLUTION);
+
+      // #4 :convert aligned common bounds to world bounds
+      const worldBounds = this.commonToWorldBounds([topLeftCommon, bottomRightCommon]);
+
+      // #5: now convert world bounds to common using Layer's coordiante system and origin
+      const commonBounds = this.worldToCommonBounds(worldBounds, {useLayerCoordinateSystem: true});
+
+      // Update for triangle layer
+      triPositionBuffer.setData({
+        // Y-flip for world bounds
+        data: getTriangleVertices({xMin: worldBounds[0][0], yMin: worldBounds[1][1], xMax: worldBounds[1][0], yMax: worldBounds[0][1], addZ: true}),
+        accessor: {size: 3}
+      });
+      Object.assign(newState, {worldBounds, commonBounds});
+
+      boundsChanged = true;
     }
+    this.setState(newState);
+    return boundsChanged;
+  }
 
-    // #2 : convert world bounds to common (Flat) bounds
-    let [topLeftCommon, bottomRightCommon] = this.worldToCommonBounds(visibleWorldBounds);
+  updateTextureRenderingBounds() {
+    // Just render visible portion of the texture
 
-    // #3: extend common bounds to match aspect ratio with viewport
-    [topLeftCommon, bottomRightCommon] = scaleToAspectRatio([topLeftCommon, bottomRightCommon], width * RESOLUTION, height * RESOLUTION);
+    const {triPositionBuffer, triTexCoordBuffer, visibleWorldBounds, worldBounds} = this.state;
 
-    // #4 :convert aligned common bounds to world bounds
-    const worldBounds = this.commonToWorldBounds([topLeftCommon, bottomRightCommon]);
-
-    // #5: now convert world bounds to common using Layer's coordiante system and origin
-    const commonBounds = this.worldToCommonBounds(worldBounds, {useLayerCoordinateSystem: true});
-
-    // Update for triangle layer
     triPositionBuffer.setData({
       // Y-flip for world bounds
-      data: getTriangleVertices({xMin: worldBounds[0][0], yMin: worldBounds[1][1], xMax: worldBounds[1][0], yMax: worldBounds[0][1], addZ: true}),
+      data: getTriangleVertices({xMin: visibleWorldBounds[0][0], yMin: visibleWorldBounds[1][1], xMax: visibleWorldBounds[1][0], yMax: visibleWorldBounds[0][1], addZ: true}),
       accessor: {size: 3}
     });
 
-    // TODO Fix and apply this for every viewport change
-    // instead of rendring entire texture (i.e. worldBounds) just render visible portion (i.e. visibleWorldBounds)
-    // according adjust texture coordiantes subrange in [0, 0] to [1, 1]
-    // triPositionBuffer.setData({
-    //   // Y-flip for world bounds
-    //   data: getTriangleVertices({xMin: visibleWorldBounds[0][0], yMin: visibleWorldBounds[1][1], xMax: visibleWorldBounds[1][0], yMax: visibleWorldBounds[0][1], addZ: true}),
-    //   accessor: {size: 3}
-    // });
-    //
-    // const textureBounds = this.getTextureBounds(worldBounds, visibleWorldBounds);
-    // triTexCoordBuffer.setData({
-    //   // Y-flip for world bounds
-    //   data: getTriangleVertices({xMin: textureBounds[0][0], yMin: textureBounds[1][1], xMax: textureBounds[1][0], yMax: textureBounds[0][1]}),
-    //   accessor: {size: 2}
-    // })
-
-
-    this.setState({worldBounds, commonBounds});
-    return true;
-  }
-
-  getTextureBounds(originaRect, subRect) {
-    const [[xMin, yMin], [xMax, yMax]] = originaRect;
-    const [[subXMin, subYMin], [subXMax, subYMax]] = subRect;
-    const width = xMax - xMin;
-    const height = yMax - yMin;
-    const tXMin = (subXMin - xMin) / width;
-    const tXMax = (subXMax - xMin) / width;
-    const tYMin = (subYMin - yMin) / height;
-    const tYMax = (subYMax - yMin) / height;
-    return [[tXMin, tYMin], [tXMax, tYMax]];
+    const textureBounds = scaleTextureCoordiantes(worldBounds, visibleWorldBounds);
+    triTexCoordBuffer.setData({
+      // Y-flip for world bounds
+      data: getTriangleVertices({xMin: textureBounds[0][0], yMin: textureBounds[1][1], xMax: textureBounds[1][0], yMax: textureBounds[0][1]}),
+      accessor: {size: 2}
+    });
   }
 
   updateState(opts) {
@@ -241,6 +233,12 @@ export default class HeatMapLayer extends CompositeLayer {
     if (props.colorRange !== oldProps.colorRange) {
       this.updateColorTexture(opts);
     }
+
+    if (changeFlags.viewportChanged) {
+      // TODO: need fix, seem to be rendring wrong part of the texture
+      // this.updateTextureRenderingBounds();
+    }
+
     this.setState({zoom: opts.context.viewport.zoom});
   }
 
@@ -323,6 +321,7 @@ export default class HeatMapLayer extends CompositeLayer {
 
     const {zoom} = this.state;
     if (!opts.context.viewport || opts.context.viewport.zoom !== zoom) {
+      console.log(`Zoom Change :  ${opts.context.viewport && opts.context.viewport.zoom} -> ${zoom} `);
       changeFlags.viewportZoomChanged = true;
     }
 
