@@ -44,17 +44,21 @@ const defaultProps = {
   radiusPixels: {type: 'number', min: 1, max: 500, value: 30},
   radiusMinPixels: {type: 'number', min: 1, value: 1},
   radiusMaxPixels: {type: 'number', min: 1, value: 500},
-  colorRange: defaultColorRange,
+  colorRange: defaultColorRange
 };
 
 export default class HeatMapLayer extends CompositeLayer {
   initializeState() {
     const {gl} = this.context;
     const textureSize = Math.min(4096, getParameter(gl, gl.MAX_TEXTURE_SIZE));
-    const weightsTexture = getFloatTexture(gl, {width: textureSize, height: textureSize, parameters: {
-      [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
-      [GL.TEXTURE_MIN_FILTER]: GL.LINEAR
-    }});
+    const weightsTexture = getFloatTexture(gl, {
+      width: textureSize,
+      height: textureSize,
+      parameters: {
+        [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
+        [GL.TEXTURE_MIN_FILTER]: GL.LINEAR
+      }
+    });
     const maxWeightsTexture = getFloatTexture(gl); // 1 X 1 texture
     this.state = {
       textureSize,
@@ -84,7 +88,7 @@ export default class HeatMapLayer extends CompositeLayer {
         data: getTriangleVertices({xMin: -1, yMin: -1, xMax: 1, yMax: 1, addZ: true}),
         accessor: {size: 3}
       }),
-      triTexCoordBuffer:  new Buffer(gl, {
+      triTexCoordBuffer: new Buffer(gl, {
         data: getTriangleVertices(),
         accessor: {size: 2}
       })
@@ -98,24 +102,24 @@ export default class HeatMapLayer extends CompositeLayer {
 
   // returns visible world bounds [[minLong, minLat], [maxLong, maxLat]
   getVisibleWorldBounds() {
-      const {textureSize} = this.state;
-      const width = textureSize;
-      const height = textureSize;
+    const {textureSize} = this.state;
+    const width = textureSize;
+    const height = textureSize;
 
-      // Unproject all 4 corners of the current screen coordiantes into world coordiantes (lng/lat)
-      // Takes care of viewport has non zero bearing/pitch (i.e axis not aligned with world coordiante system)
-      const topLeft = this.unproject([0, 0]);
-      const topRight = this.unproject([width, 0]);
-      const bottomLeft = this.unproject([0, height]);
-      const bottomRight = this.unproject([width, height]);
+    // Unproject all 4 corners of the current screen coordiantes into world coordiantes (lng/lat)
+    // Takes care of viewport has non zero bearing/pitch (i.e axis not aligned with world coordiante system)
+    const topLeft = this.unproject([0, 0]);
+    const topRight = this.unproject([width, 0]);
+    const bottomLeft = this.unproject([0, height]);
+    const bottomRight = this.unproject([width, height]);
 
-      // Now build bounding box in world space (aligned to world coordiante system)
-      const minLong = Math.min(topLeft[0], topRight[0], bottomLeft[0], bottomRight[0]);
-      const maxLong = Math.max(topLeft[0], topRight[0], bottomLeft[0], bottomRight[0]);
-      const minLat = Math.min(topLeft[1], topRight[1], bottomLeft[1], bottomRight[1]);
-      const maxLat = Math.max(topLeft[1], topRight[1], bottomLeft[1], bottomRight[1]);
+    // Now build bounding box in world space (aligned to world coordiante system)
+    const minLong = Math.min(topLeft[0], topRight[0], bottomLeft[0], bottomRight[0]);
+    const maxLong = Math.max(topLeft[0], topRight[0], bottomLeft[0], bottomRight[0]);
+    const minLat = Math.min(topLeft[1], topRight[1], bottomLeft[1], bottomRight[1]);
+    const maxLat = Math.max(topLeft[1], topRight[1], bottomLeft[1], bottomRight[1]);
 
-      return [[minLong, minLat], [maxLong, maxLat]];
+    return [[minLong, minLat], [maxLong, maxLat]];
   }
 
   // input: worldBounds: [[minLong, minLat], [maxLong, maxLat]]
@@ -134,7 +138,7 @@ export default class HeatMapLayer extends CompositeLayer {
       topLeftCommon = this.projectPosition([minLong, maxLat, 0]);
       bottomRightCommon = this.projectPosition([maxLong, minLat, 0]);
     } else {
-      topLeftCommon =  viewport.projectPosition([minLong, maxLat, 0]);
+      topLeftCommon = viewport.projectPosition([minLong, maxLat, 0]);
       bottomRightCommon = viewport.projectPosition([maxLong, minLat, 0]);
     }
     // Ignore z component
@@ -163,19 +167,29 @@ export default class HeatMapLayer extends CompositeLayer {
     const height = textureSize;
     // #1: get world bounds for current viewport extends
     const visibleWorldBounds = this.getVisibleWorldBounds(); // TODO: Change to visible bounds
-    const newState = {visibleWorldBounds};
+    // #2 : convert world bounds to common (Flat) bounds
+    const visibleCommonBounds = this.worldToCommonBounds(visibleWorldBounds);
+
+    const newState = {visibleWorldBounds, visibleCommonBounds};
     let boundsChanged = false;
 
-    if (forceUpdate || !this.state.worldBounds || !boundsContain(this.state.worldBounds, visibleWorldBounds)) {
-
+    if (
+      forceUpdate ||
+      !this.state.worldBounds ||
+      !boundsContain(this.state.worldBounds, visibleWorldBounds)
+    ) {
       // #2 : convert world bounds to common (Flat) bounds
-      let [topLeftCommon, bottomRightCommon] = this.worldToCommonBounds(visibleWorldBounds);
+      // let [topLeftCommon, bottomRightCommon] = visibleCommonBounds;
 
       // #3: extend common bounds to match aspect ratio with viewport
-      [topLeftCommon, bottomRightCommon] = scaleToAspectRatio([topLeftCommon, bottomRightCommon], width * RESOLUTION, height * RESOLUTION);
+      const scaledCommonBounds = scaleToAspectRatio(
+        visibleCommonBounds,
+        width * RESOLUTION,
+        height * RESOLUTION
+      );
 
       // #4 :convert aligned common bounds to world bounds
-      const worldBounds = this.commonToWorldBounds([topLeftCommon, bottomRightCommon]);
+      const worldBounds = this.commonToWorldBounds(scaledCommonBounds);
 
       // #5: now convert world bounds to common using Layer's coordiante system and origin
       const commonBounds = this.worldToCommonBounds(worldBounds, {useLayerCoordinateSystem: true});
@@ -183,10 +197,16 @@ export default class HeatMapLayer extends CompositeLayer {
       // Update for triangle layer
       triPositionBuffer.setData({
         // Y-flip for world bounds
-        data: getTriangleVertices({xMin: worldBounds[0][0], yMin: worldBounds[1][1], xMax: worldBounds[1][0], yMax: worldBounds[0][1], addZ: true}),
+        data: getTriangleVertices({
+          xMin: worldBounds[0][0],
+          yMin: worldBounds[1][1],
+          xMax: worldBounds[1][0],
+          yMax: worldBounds[0][1],
+          addZ: true
+        }),
         accessor: {size: 3}
       });
-      Object.assign(newState, {worldBounds, commonBounds});
+      Object.assign(newState, {worldBounds, commonBounds, scaledCommonBounds});
 
       boundsChanged = true;
     }
@@ -197,18 +217,36 @@ export default class HeatMapLayer extends CompositeLayer {
   updateTextureRenderingBounds() {
     // Just render visible portion of the texture
 
-    const {triPositionBuffer, triTexCoordBuffer, visibleWorldBounds, worldBounds} = this.state;
+    const {
+      triPositionBuffer,
+      triTexCoordBuffer,
+      visibleCommonBounds,
+      // scaledCommonBounds,
+      commonBounds,
+      visibleWorldBounds
+    } = this.state;
 
     triPositionBuffer.setData({
       // Y-flip for world bounds
-      data: getTriangleVertices({xMin: visibleWorldBounds[0][0], yMin: visibleWorldBounds[1][1], xMax: visibleWorldBounds[1][0], yMax: visibleWorldBounds[0][1], addZ: true}),
+      data: getTriangleVertices({
+        xMin: visibleWorldBounds[0][0],
+        yMin: visibleWorldBounds[1][1],
+        xMax: visibleWorldBounds[1][0],
+        yMax: visibleWorldBounds[0][1],
+        addZ: true
+      }),
       accessor: {size: 3}
     });
 
-    const textureBounds = scaleTextureCoordiantes(worldBounds, visibleWorldBounds);
+    const textureBounds = scaleTextureCoordiantes(commonBounds, visibleCommonBounds);
     triTexCoordBuffer.setData({
       // Y-flip for world bounds
-      data: getTriangleVertices({xMin: textureBounds[0][0], yMin: textureBounds[1][1], xMax: textureBounds[1][0], yMax: textureBounds[0][1]}),
+      data: getTriangleVertices({
+        xMin: textureBounds[0][0],
+        yMin: textureBounds[1][1],
+        xMax: textureBounds[1][0],
+        yMax: textureBounds[0][1]
+      }),
       accessor: {size: 2}
     });
   }
@@ -264,11 +302,19 @@ export default class HeatMapLayer extends CompositeLayer {
     const uniforms = Object.assign(
       {},
       // TOOD: we need Layer ModelMatrix, CoordianteSystem or Origin.
-      weightsTransform.model.getModuleUniforms({viewport: this.context.viewport, devicePixelRatio: 2}),
+      weightsTransform.model.getModuleUniforms({
+        viewport: this.context.viewport,
+        devicePixelRatio: 2
+      }),
       {
         radiusPixels,
         intensity,
-        commonBounds: [commonBounds[0][0], commonBounds[0][1], commonBounds[1][0], commonBounds[1][1]],
+        commonBounds: [
+          commonBounds[0][0],
+          commonBounds[0][1],
+          commonBounds[1][0],
+          commonBounds[1][1]
+        ],
         textureWidth: textureSize
       }
     );
@@ -311,17 +357,13 @@ export default class HeatMapLayer extends CompositeLayer {
     if (this.isDataChanged(opts)) {
       changeFlags.dataChanged = true;
     }
-    if (
-      oldProps.radiusPixels !== props.radiusPixels ||
-      oldProps.intensity !== props.intensity
-    ) {
+    if (oldProps.radiusPixels !== props.radiusPixels || oldProps.intensity !== props.intensity) {
       changeFlags.uniformsChanged = true;
     }
     changeFlags.viewportChanged = opts.changeFlags.viewportChanged;
 
     const {zoom} = this.state;
     if (!opts.context.viewport || opts.context.viewport.zoom !== zoom) {
-      console.log(`Zoom Change :  ${opts.context.viewport && opts.context.viewport.zoom} -> ${zoom} `);
       changeFlags.viewportZoomChanged = true;
     }
 
@@ -329,10 +371,8 @@ export default class HeatMapLayer extends CompositeLayer {
   }
 
   shouldUpdateBounds(opts) {
-
     return opts.changeFlags.viewportChanged;
   }
-
 
   isDataChanged({changeFlags}) {
     if (changeFlags.dataChanged) {
@@ -373,7 +413,7 @@ export default class HeatMapLayer extends CompositeLayer {
     weightsTransform.update({
       sourceBuffers: {
         positions: positionsBuffer,
-        weights: weightsBuffer,
+        weights: weightsBuffer
       },
       elementCount
     });
@@ -408,22 +448,21 @@ export default class HeatMapLayer extends CompositeLayer {
         updateTriggers
       }),
       {
-      id: 'heatmap-triangle-layer',
-      data: {
-        positions: triPositionBuffer,
-        texCoords: triTexCoordBuffer
-      },
-      wireframe: renderBoundingBox,
-      count: 6,
-      // TODO (finalize these props)
-      maxTexture: maxWeightsTexture,
-      colorRange,
-      colorTexture,
-      texture: weightsTexture,
-      quantizeColor
-    }
-  );
-
+        id: 'heatmap-triangle-layer',
+        data: {
+          positions: triPositionBuffer,
+          texCoords: triTexCoordBuffer
+        },
+        wireframe: renderBoundingBox,
+        count: 6,
+        // TODO (finalize these props)
+        maxTexture: maxWeightsTexture,
+        colorRange,
+        colorTexture,
+        texture: weightsTexture,
+        quantizeColor
+      }
+    );
   }
 }
 

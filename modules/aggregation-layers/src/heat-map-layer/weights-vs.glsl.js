@@ -11,11 +11,11 @@ void main()
   weightsTexture = vec4(weights * intensity, 0., 0., 1.);
 
   float radiusTexels  = radiusPixels * textureWidth / (commonBounds.z - commonBounds.x);
-  gl_PointSize = radiusPixels * 2.;
+  gl_PointSize = radiusTexels * 2.;
 
   // TODO: do we need 64 bit projection?
   vec3 commonPosition = project_position(positions, vec2(0));
-  gl_Position = vec4(commonPosition, 1.);
+  // gl_Position = vec4(commonPosition, 1.);
 
   gl_Position.xy = (commonPosition.xy - commonBounds.xy) / (commonBounds.zw - commonBounds.xy) ;
   gl_Position.xy = (gl_Position.xy * 2.) - (1.);
