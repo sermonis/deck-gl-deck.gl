@@ -36,6 +36,7 @@ import weights_fs from './weights-fs.glsl';
 import vs_max from './max-vs.glsl';
 
 const RESOLUTION = 2; // (number of common space pixels) / (number texels)
+const SIZE_2K = 2048;
 
 const defaultProps = {
   getPosition: {type: 'accessor', value: x => x.position},
@@ -50,7 +51,7 @@ const defaultProps = {
 export default class HeatMapLayer extends CompositeLayer {
   initializeState() {
     const {gl} = this.context;
-    const textureSize = Math.min(4096, getParameter(gl, gl.MAX_TEXTURE_SIZE));
+    const textureSize = Math.min(SIZE_2K, getParameter(gl, gl.MAX_TEXTURE_SIZE));
     const weightsTexture = getFloatTexture(gl, {
       width: textureSize,
       height: textureSize,
@@ -299,13 +300,15 @@ export default class HeatMapLayer extends CompositeLayer {
   updateWeightmap() {
     const {radiusPixels, intensity} = this.props;
     const {weightsTransform, commonBounds, textureSize} = this.state;
+    const moduleParameters = Object.assign(Object.create(this.props), {
+      viewport: this.context.viewport,
+      pickingActive: 0
+    });
+
     const uniforms = Object.assign(
       {},
       // TOOD: we need Layer ModelMatrix, CoordianteSystem or Origin.
-      weightsTransform.model.getModuleUniforms({
-        viewport: this.context.viewport,
-        devicePixelRatio: 2
-      }),
+      weightsTransform.model.getModuleUniforms(moduleParameters),
       {
         radiusPixels,
         intensity,
